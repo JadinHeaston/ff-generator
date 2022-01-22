@@ -9,7 +9,7 @@
 #include "nfd.h" //Native File Dialog.
 //This is needed for virtually everything in BrowseFolder.
 #include <shlobj.h>
-//YO
+
 
 #include <chrono> //Time tracking.
 
