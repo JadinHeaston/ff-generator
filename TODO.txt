@@ -1,0 +1,12 @@
+Implement methods for user input.
+	Command line is a good option.
+		DONE
+	File explorer for selecting root folder.
+		DONE
+Multithreading the task.
+	DONE
+
+Flesh out random attributes.
+Implement a maximum deepness, that is then "dug outwards" as the program progresses?
+	seems like a lot of overhead for small things with a large overhead, but maybe it should be created as a choice.
+	Having too many folders in the root directory is a problem.
