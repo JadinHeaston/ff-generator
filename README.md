@@ -11,3 +11,4 @@ Allows the creation of randomly named folders and files, with the ability to add
 	-s - Size of random content string.
 	-t - Total file count.
 	-w - Write random content string to file.
+f
