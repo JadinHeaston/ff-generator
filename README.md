@@ -1,7 +1,7 @@
 # generateRandomFiles
 Allows the creation of randomly named folders and files, with the ability to add random content to generated files.
 
-There are several arguments that can be passed:
+#Arguments:
 	-f - Amount of files per folder.
 	-h | -help - Help
 	-o - Amount of folders per folder.
