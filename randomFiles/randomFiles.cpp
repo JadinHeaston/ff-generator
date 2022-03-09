@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
             randomStringSizes = atoi(argv[i + 1]);
         else if (strncmp(argv[i], "-t", 2) == 0) //Total file amount.
             totalFileAmount = atoi(argv[i + 1]);
-        else if (strncmp(argv[i], "-w", 2) == 0) //Write random strings to files bool.
+        else if (strncmp(argv[i], "-w", 2) == 0) //Write random strings to files.
             writeRandomStringToFile = true;
         //std::cout << argv[i] << std::endl;
     }
