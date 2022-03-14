@@ -56,11 +56,8 @@ int main(int argc, char* argv[])
         }
     }
 
-
     for (size_t i = 0; i < argc; i++) // Cycle through all arguments.
     {
-        //std::cout << argv[i] << " : " << strncmp(argv[i], "--", 2) << std::endl;
-
         //Check if the argument contains a single or double slash
         if (strncmp(argv[i], "--", 2) == 0) //Check for double slash
         {
@@ -126,12 +123,19 @@ int main(int argc, char* argv[])
         else if (singleCharArguments['w']) //Write random strings to files bool.
             writeRandomStringToFile = true;
     }
+    
+
+
     //Argument Verification
     
     //Make sure that a total file count is provided. Kinda the point of the program, huh?
+    totalFileAmount = 1;
     if (totalFileAmount == 0)
     {
-        std::cout << "ERROR: Please provide -t {NUMBER} to specify the total amount of files to create." << std::endl;
+        std::cout << "ERROR: No file amount was defined." << std::endl;
+        std::cout << "Use --total-file-count <INTEGER> to define how many files should be created." << std::endl;
+        //Prompt the user to enter it now, or cancel.
+        system("PAUSE");
         return 0;
     }
 
@@ -152,6 +156,8 @@ int main(int argc, char* argv[])
     else
         rootFolderLocation = formatFilePath(std::filesystem::absolute(rootFolderLocation).wstring());
 
+
+
     //ARGS FINISHED.
 
 
@@ -166,11 +172,13 @@ int main(int argc, char* argv[])
         std::wcout << L"The root path (--path) is: " << rootFolderLocation << std::endl;
         std::cout << "CALCULATE ME" << " Folders will be created." << std::endl; //***** Calculate how many folders will be made.
         std::cout << totalFileAmount << " Files will be created. (--total-file-count)" << std::endl;
-        std::cout << filesPerFolder << " Files will exist in each folder. (--files-per-folder)" << std::endl;
+        std::cout << "A maximum of " << filesPerFolder << " files can exist in each folder. (--files - per - folder)" << std::endl;
         if (writeRandomStringToFile)
             std::cout << "A \"" << randomStringSizes << "\" length string will be randomly created within each file. (--string-size)" << std::endl;
         if (randomAttributes)
             std::cout << "Each file, and folder, will have completely random attributes. (-r)" << std::endl;
+
+        system("PAUSE");
     }
 
 
@@ -178,7 +186,7 @@ int main(int argc, char* argv[])
 
 
     thread_pool threadPool(threads);//Creating thread pool
-    int threadAssignmentIteration = totalFileAmount / filesPerFolder; //How many folders will be created. Could be 1 additional one, if there is a remainder.
+    size_t threadAssignmentIteration = totalFileAmount / filesPerFolder; //How many folders will be created. Could be 1 additional one, if there is a remainder.
     
     for (size_t iterator = 0; iterator < threadAssignmentIteration; ++iterator) //Iterate!
     {
@@ -244,7 +252,7 @@ std::wstring stringToWString(const std::string& s)
     return temp;
 }
 
-std::string random_string(std::size_t length)
+std::string random_string(size_t length)
 {
     const std::string CHARACTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -254,7 +262,7 @@ std::string random_string(std::size_t length)
 
     std::string random_string;
 
-    for (std::size_t i = 0; i < length; ++i)
+    for (size_t i = 0; i < length; ++i)
     {
         random_string += CHARACTERS[distribution(generator)];
     }
@@ -265,7 +273,7 @@ std::string random_string(std::size_t length)
 std::wstring charToWString(char* givenCharArray)
 {
     std::string intermediaryString = givenCharArray;
-    size_t wchars_num = MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, NULL, 0);
+    int wchars_num = MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, NULL, 0);
     wchar_t* wstr = new wchar_t[wchars_num];
     MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, wstr, wchars_num);
 
