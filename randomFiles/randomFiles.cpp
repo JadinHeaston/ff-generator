@@ -4,22 +4,27 @@
 #include <fstream> //File creation.
 #include <random> //For generating random strings.
 #include <filesystem> //Directory creation
+#include <chrono> //Time tracking.
+
 #include "thread_pool.hpp" //Thread pool stuff.
 
 #include "nfd.h" //Native File Dialog.
-//This is needed for virtually everything in BrowseFolder.
-#include <shlobj.h>
+#include <shlobj.h> //This is needed for virtually everything in BrowseFolder.
 
 
-#include <chrono> //Time tracking.
+
+//Holds an array of single letter arguments that need to be applied.
+std::unordered_map<char, size_t> singleCharArguments;
 
 
 std::string random_string(std::size_t length);
 std::wstring stringToWString(const std::string& s); //Does as said. Found here: https://forums.codeguru.com/showthread.php?193852-How-to-convert-string-to-wstring
-void createFiles(const std::wstring& rootFolder, const int& fileAmount, const bool& randomStringInput, const int& randomStringLength, const bool& randomAttributes);
+void createFiles(const std::wstring& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes);
 std::wstring charToWString(char* givenCharArray);
-std::wstring formatFilePath(std::wstring givenFile);
+std::wstring formatFilePath(std::wstring givenString, std::wstring givenDirectorySeparator = L"");
 std::wstring browseFolder();
+
+std::wstring directorySeparator = L"/";
 
 int main(int argc, char* argv[])
 {
@@ -29,28 +34,19 @@ int main(int argc, char* argv[])
     //Declaring variables
     std::wstring rootFolderLocation;
 
-    int totalFileAmount = 0; //Define how many files to create.
-    int filesPerFolder = 1000; //Defines how many files will exist in each folder. The last folder could be smaller, if not evenly divisible.
-    int foldersPerFolder = 500; //Defines how many subfolders are created before a new 
+    size_t totalFileAmount = 0; //Define how many files to create.
+    size_t filesPerFolder = 1000; //Defines how many files will exist in each folder. The last folder could be smaller, if not evenly divisible.
+    size_t foldersPerFolder = 500; //Defines how many subfolders are created before a new 
     size_t randomStringSizes = 50; //Controls how large strings are. Be wary of the 255 path limit.
     bool writeRandomStringToFile = false; //Disabling this will GREATLY increase performance.
     bool randomAttributes = false; //Defines whether random attributes will be applied to created files.
+    bool skipWarning = false; 
     std::wstring subRootFolder;
-
-
-    //READ INPUT:
-    //-help
-    //-p rootFolderLocation
-    //-f filesPerFolder
-    //-o foldersPerFolder
-    //-r randomAttributes
-    //-s randomStringSizes
-    //-t totalFileAmount
-    //-w writeRandomStringToFile
-
+    size_t threads = std::thread::hardware_concurrency();
+    bool windowsMaxPathBypass = false;
 
     //Verifying that no \ escaped " exist in the path string.
-    for (int i = 0; i < argc; i++)
+    for (size_t i = 0; i < argc; i++)
     {
         std::size_t found = std::string(argv[i]).find("\"");
         if (found != std::string::npos)
@@ -59,64 +55,79 @@ int main(int argc, char* argv[])
             return 0;
         }
     }
-    //Reading args
-    if (argc == 1) //No arguments provided. Notify. Close program.
-    {
-        std::cout << "No arguments provided.\nUse the \"-h\" or \"-help\" switch to show the available options.\n(-s and -d are required for operation)" << std::endl;
-        system("PAUSE");
-        return 0;
-    }
-    else if (argc == 2) //Checking for help message.
-    {
-        if (strncmp(argv[1], "-h", 3) == 0 || strcmp(argv[1], "-help") == 0) //Checking second argument for if it is "-h" or "-help".
-        {
-            //Display help
-            std::cout << "HELP PROVIDED. GET FUCKED" << std::endl;
-            system("PAUSE");
-            return 0;
-        }
-        else //No arguments provided. Notify. Close program.
-        {
-            std::cout << "Use the \"-h\" or \"-help\" switch to show the available options.\n(-s and -d are required for operation)" << std::endl;
-            system("PAUSE");
-            return 0;
-        }
-    }
-    for (int i = 0; i < argc; i++) // Cycle through all arguments.
-    {
-        if (strncmp(argv[i], "-p", 2) == 0) //Root folder path
-        {
-            rootFolderLocation = formatFilePath(charToWString(argv[i + 1])); //Assign to variable.
 
-            if (rootFolderLocation.back() == L'\\')
-                rootFolderLocation.pop_back(); //Remove the slash.
-            if (!std::filesystem::is_directory(rootFolderLocation)) //Verify path is real and valid. Fail if invalid
+
+    for (size_t i = 0; i < argc; i++) // Cycle through all arguments.
+    {
+        //std::cout << argv[i] << " : " << strncmp(argv[i], "--", 2) << std::endl;
+
+        //Check if the argument contains a single or double slash
+        if (strncmp(argv[i], "--", 2) == 0) //Check for double slash
+        {
+            if (strcmp(argv[1], "--help") == 0) //Checking second argument for if it is "-h" or "-help".
             {
-                std::wcout << "-s path provided was NOT found. (" << rootFolderLocation << ")" << std::endl;
+                //Display help
+                std::cout << "HELP PROVIDED. GET FUCKED" << std::endl;
+
+                system("PAUSE");
                 return 0;
             }
+            else if ((strcmp(argv[i], "--files-per-folder") == 0)) //Files per folder.
+                filesPerFolder = atoi(argv[i + 1]);
+            else if ((strcmp(argv[i], "--folders-per-folder") == 0)) //Gets the provided configuration name.
+                foldersPerFolder = atoi(argv[i + 1]);
+            else if ((strcmp(argv[i], "--path") == 0))
+            {
+                rootFolderLocation = formatFilePath(charToWString(argv[i + 1])); //Assign to variable.
 
-            rootFolderLocation = rootFolderLocation + L"\\";
+                if (rootFolderLocation.back() == L'\\')
+                    rootFolderLocation.pop_back(); //Remove the slash.
+                if (!std::filesystem::is_directory(rootFolderLocation)) //Verify path is real and valid. Fail if invalid
+                {
+                    std::wcout << "-s path provided was NOT found. (" << rootFolderLocation << ")" << std::endl;
+                    return 0;
+                }
 
+                rootFolderLocation = rootFolderLocation + L"\\";
+            }
+            else if ((strcmp(argv[i], "--string-size") == 0)) //Random string size.
+                randomStringSizes = atoi(argv[i + 1]);
+            else if ((strcmp(argv[i], "--total-file-count") == 0)) //Total file amount.
+                totalFileAmount = atoi(argv[i + 1]);
+            else if ((strcmp(argv[i], "--threads") == 0))
+                threads = atoi(argv[i + 1]);
         }
-        else if (strncmp(argv[i], "-f", 2) == 0) //Files per folder.
-            filesPerFolder = atoi(argv[i + 1]);
-        else if (strncmp(argv[i], "-o", 2) == 0) //Folders per folder.
-            foldersPerFolder = atoi(argv[i + 1]);
-        else if (strncmp(argv[i], "-r", 2) == 0) //Random attributes bool.
-            randomAttributes = true;
-        else if (strncmp(argv[i], "-s", 2) == 0) //Random string size.
-            randomStringSizes = atoi(argv[i + 1]);
-        else if (strncmp(argv[i], "-t", 2) == 0) //Total file amount.
-            totalFileAmount = atoi(argv[i + 1]);
-        else if (strncmp(argv[i], "-w", 2) == 0) //Write random strings to files.
-            writeRandomStringToFile = true;
-        //std::cout << argv[i] << std::endl;
+        else if (strncmp(argv[i], "-", 1) == 0) //Check for single dash.
+        {
+            for (size_t iterator = 1; iterator < sizeof(argv[i]); ++iterator) //Iterating through all characters, after the slash. (Starting at 1 to skip the initial dash)
+                singleCharArguments[tolower(argv[i][iterator])] = 1; //Ensuring keys are lowercase for easy use later.
+        }
     }
+            
 
-    //DISPLAY USER OUTPUT AND ALLOW THEM TO CANCEL.
-        //IMPLEMENT ARGUMENT TO SKIP THIS.
-
+    //Iterating through argument array and applying arguments.
+    for (size_t iterator = 0; iterator < sizeof(singleCharArguments); ++iterator)
+    {
+        //std::cout << singleCharArguments['h'] << std::endl;
+        if (singleCharArguments['h']) //Short help message.
+        {
+            //Display help message.
+            std::cout << "The only required argument is \"--total-file-count <INTEGER>\"." << std::endl;
+            std::cout << "Detailed help can be found by using '--help' or utilizing the readme.md file: https://github.com/JadinHeaston/ff-generator" << std::endl;
+            system("PAUSE");
+            exit(1);
+        }
+        else if (singleCharArguments['l']) //Windows Max Path Bypass
+            windowsMaxPathBypass = true;
+        else if (singleCharArguments['r']) //Random attributes bool.
+            randomAttributes = true;
+        else if (singleCharArguments['s']) //Skips the warning and confirmation screen.
+            skipWarning = true;
+        else if (singleCharArguments['w']) //Write random strings to files bool.
+            writeRandomStringToFile = true;
+    }
+    //Argument Verification
+    
     //Make sure that a total file count is provided. Kinda the point of the program, huh?
     if (totalFileAmount == 0)
     {
@@ -125,7 +136,7 @@ int main(int argc, char* argv[])
     }
 
     //FOLDER VALIDATION
-    if (rootFolderLocation.empty()) //If no path is provided, give a folder selection dialog.
+    if (rootFolderLocation.empty()) //If no path is provided, give the folder selection dialog.
         rootFolderLocation = browseFolder();
 
     if (rootFolderLocation == L"CANCEL" || rootFolderLocation.empty()) //Check if any errors occured, or no input was given.
@@ -134,14 +145,42 @@ int main(int argc, char* argv[])
         return 0; //End.
     }
 
+    //MAX_PATH bypass.
+    //Also ensuring that path is an absolute path.
+    if (windowsMaxPathBypass)
+        rootFolderLocation = formatFilePath(L"\\\\?\\" + std::filesystem::absolute(rootFolderLocation).wstring(), L"\\");
+    else
+        rootFolderLocation = formatFilePath(std::filesystem::absolute(rootFolderLocation).wstring());
 
-    thread_pool threadPool;//Creating thread pool
+    //ARGS FINISHED.
+
+
+
+    
+    //Displaying warning/confirmation screen.
+    if (!skipWarning)
+    {
+        //DISPLAY USER OUTPUT AND ALLOW THEM TO CANCEL.
+        std::cout << "----- WARNING -----" << std::endl;
+        std::cout << "Read the below settings very carefully:" << std::endl;
+        std::wcout << L"The root path (--path) is: " << rootFolderLocation << std::endl;
+        std::cout << "CALCULATE ME" << " Folders will be created." << std::endl; //***** Calculate how many folders will be made.
+        std::cout << totalFileAmount << " Files will be created. (--total-file-count)" << std::endl;
+        std::cout << filesPerFolder << " Files will exist in each folder. (--files-per-folder)" << std::endl;
+        if (writeRandomStringToFile)
+            std::cout << "A \"" << randomStringSizes << "\" length string will be randomly created within each file. (--string-size)" << std::endl;
+        if (randomAttributes)
+            std::cout << "Each file, and folder, will have completely random attributes. (-r)" << std::endl;
+    }
+
+
+
+
+
+    thread_pool threadPool(threads);//Creating thread pool
     int threadAssignmentIteration = totalFileAmount / filesPerFolder; //How many folders will be created. Could be 1 additional one, if there is a remainder.
     
-    
-
-
-    for (int iterator = 0; iterator < threadAssignmentIteration; ++iterator) //Iterate!
+    for (size_t iterator = 0; iterator < threadAssignmentIteration; ++iterator) //Iterate!
     {
         if (iterator % foldersPerFolder == 0 && iterator >= foldersPerFolder) //Create new directory under the root when max is hit.
         {
@@ -164,10 +203,10 @@ int main(int argc, char* argv[])
 
 
     system("PAUSE");
-
+    return 1;
 }
 
-void createFiles(const std::wstring& rootFolder, const int& fileAmount, const bool& randomStringInput, const int& randomStringLength, const bool& randomAttributes)
+void createFiles(const std::wstring& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes)
 {
     std::wstring subFolder = rootFolder + stringToWString(random_string(randomStringLength)) + L"\\"; //Randomly create a new random folder within that given directory.
 
@@ -180,7 +219,7 @@ void createFiles(const std::wstring& rootFolder, const int& fileAmount, const bo
     for (size_t iterator = 0; iterator < fileAmount; ++iterator) //Iterate!
     {
         randomString = stringToWString(random_string(randomStringLength));
-        randomFile.open(subFolder + randomString + L".txt"); //Create random file with a handle to it.
+        randomFile.open(std::filesystem::path(subFolder + randomString + L".txt")); //Create random file with a handle to it.
 
         if (randomStringInput) //Check if we are writing a string to the file.
             randomFile << random_string(randomStringLength); //Input a random string into the file.
@@ -189,11 +228,11 @@ void createFiles(const std::wstring& rootFolder, const int& fileAmount, const bo
 
         randomFile.close(); //Close random file.
 
-        //if (randomAttributes)
-        //{
-        //    std::filesystem::last_write_time(std::filesystem::path(subFolder + randomString + L".txt"), rand()); //Changing last modified time.
-        //    //Changing creation date.
-        //}
+        if (randomAttributes)
+        {
+            //std::filesystem::last_write_time(std::filesystem::path(subFolder + randomString + L".txt"), rand()); //Changing last modified time.
+            //Changing creation date.
+        }
 
     }
 }
@@ -226,25 +265,39 @@ std::string random_string(std::size_t length)
 std::wstring charToWString(char* givenCharArray)
 {
     std::string intermediaryString = givenCharArray;
-    int wchars_num = MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, NULL, 0);
+    size_t wchars_num = MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, NULL, 0);
     wchar_t* wstr = new wchar_t[wchars_num];
     MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, wstr, wchars_num);
 
     return wstr;
 }
 
-//Takes a string and removes "/" and places "\\".
-std::wstring formatFilePath(std::wstring givenFile)
+//Uniformly sets directory separators.
+std::wstring formatFilePath(std::wstring givenString, std::wstring givenDirectorySeparator)
 {
-    //Formating givenFile to have the slashes ALL be \ instead of mixed with / and \.
-    for (int i = 0; i < (int)givenFile.length(); ++i)
+    if (givenDirectorySeparator == L"\\" || givenString.find(L"\\\\?\\") != std::wstring::npos) //If the windows max_path bypass is in the path, then all separators must be backslashes.
     {
-        if (givenFile[i] == '/')
-            givenFile[i] = '\\';
+        //Formating givenFile to have the slashes ALL be \.
+        for (size_t i = 0; i < (size_t)givenString.length(); ++i)
+        {
+            if (givenString[i] == '/')
+                givenString[i] = '\\';
+        }
+    }
+    else
+    {
+        //Formating givenFile to have the slashes ALL be /.
+        for (size_t i = 0; i < (size_t)givenString.length(); ++i)
+        {
+            if (givenString[i] == '\\')
+                givenString[i] = '/';
+        }
     }
 
-    return givenFile;
+
+    return givenString;
 }
+
 
 //BROWSE FOLDER - Opens a Windows Explorer browse folder dialog.
 std::wstring browseFolder()
