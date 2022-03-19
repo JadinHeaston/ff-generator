@@ -18,13 +18,11 @@ std::unordered_map<char, size_t> singleCharArguments;
 
 
 std::string random_string(std::size_t length);
-std::wstring stringToWString(const std::string& s); //Does as said. Found here: https://forums.codeguru.com/showthread.php?193852-How-to-convert-string-to-wstring
-void createFiles(const std::wstring& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes);
-std::wstring charToWString(char* givenCharArray);
-std::wstring formatFilePath(std::wstring givenString, std::wstring givenDirectorySeparator = L"");
-std::wstring browseFolder();
+void createFiles(const std::string& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes);
+std::string formatFilePath(std::string givenString, std::string givenDirectorySeparator = "");
+std::string browseFolder();
 
-std::wstring directorySeparator = L"/";
+std::string directorySeparator = "/";
 
 int main(int argc, char* argv[])
 {
@@ -32,7 +30,7 @@ int main(int argc, char* argv[])
     std::chrono::time_point start = std::chrono::steady_clock::now();
 
     //Declaring variables
-    std::wstring rootFolderLocation;
+    std::string rootFolderLocation;
 
     size_t totalFileAmount = 0; //Define how many files to create.
     size_t filesPerFolder = 1000; //Defines how many files will exist in each folder. The last folder could be smaller, if not evenly divisible.
@@ -41,7 +39,7 @@ int main(int argc, char* argv[])
     bool writeRandomStringToFile = false; //Disabling this will GREATLY increase performance.
     bool randomAttributes = false; //Defines whether random attributes will be applied to created files.
     bool skipWarning = false; 
-    std::wstring subRootFolder;
+    std::string subRootFolder;
     size_t threads = std::thread::hardware_concurrency();
     bool windowsMaxPathBypass = false;
 
@@ -75,17 +73,17 @@ int main(int argc, char* argv[])
                 foldersPerFolder = atoi(argv[i + 1]);
             else if ((strcmp(argv[i], "--path") == 0))
             {
-                rootFolderLocation = formatFilePath(charToWString(argv[i + 1])); //Assign to variable.
+                rootFolderLocation = formatFilePath(argv[i + 1]); //Assign to variable.
 
                 if (rootFolderLocation.back() == L'\\')
                     rootFolderLocation.pop_back(); //Remove the slash.
                 if (!std::filesystem::is_directory(rootFolderLocation)) //Verify path is real and valid. Fail if invalid
                 {
-                    std::wcout << "-s path provided was NOT found. (" << rootFolderLocation << ")" << std::endl;
+                    std::cout << "-s path provided was NOT found. (" << rootFolderLocation << ")" << std::endl;
                     return 0;
                 }
 
-                rootFolderLocation = rootFolderLocation + L"\\";
+                rootFolderLocation = rootFolderLocation + "\\";
             }
             else if ((strcmp(argv[i], "--string-size") == 0)) //Random string size.
                 randomStringSizes = atoi(argv[i + 1]);
@@ -143,7 +141,7 @@ int main(int argc, char* argv[])
     if (rootFolderLocation.empty()) //If no path is provided, give the folder selection dialog.
         rootFolderLocation = browseFolder();
 
-    if (rootFolderLocation == L"CANCEL" || rootFolderLocation.empty()) //Check if any errors occured, or no input was given.
+    if (rootFolderLocation == "CANCEL" || rootFolderLocation.empty()) //Check if any errors occured, or no input was given.
     {
         std::cout << "FAILED. NO PATH PROVIDED." << std::endl;
         return 0; //End.
@@ -152,9 +150,9 @@ int main(int argc, char* argv[])
     //MAX_PATH bypass.
     //Also ensuring that path is an absolute path.
     if (windowsMaxPathBypass)
-        rootFolderLocation = formatFilePath(L"\\\\?\\" + std::filesystem::absolute(rootFolderLocation).wstring(), L"\\");
+        rootFolderLocation = formatFilePath("\\\\?\\" + std::filesystem::absolute(rootFolderLocation).string(), "\\");
     else
-        rootFolderLocation = formatFilePath(std::filesystem::absolute(rootFolderLocation).wstring());
+        rootFolderLocation = formatFilePath(std::filesystem::absolute(rootFolderLocation).string());
 
 
 
@@ -169,7 +167,7 @@ int main(int argc, char* argv[])
         //DISPLAY USER OUTPUT AND ALLOW THEM TO CANCEL.
         std::cout << "----- WARNING -----" << std::endl;
         std::cout << "Read the below settings very carefully:" << std::endl;
-        std::wcout << L"The root path (--path) is: " << rootFolderLocation << std::endl;
+        std::cout << "The root path (--path) is: " << rootFolderLocation << std::endl;
         std::cout << "CALCULATE ME" << " Folders will be created." << std::endl; //***** Calculate how many folders will be made.
         std::cout << totalFileAmount << " Files will be created. (--total-file-count)" << std::endl;
         std::cout << "A maximum of " << filesPerFolder << " files can exist in each folder. (--files - per - folder)" << std::endl;
@@ -192,7 +190,7 @@ int main(int argc, char* argv[])
     {
         if (iterator % foldersPerFolder == 0 && iterator >= foldersPerFolder) //Create new directory under the root when max is hit.
         {
-            subRootFolder = rootFolderLocation + stringToWString(random_string(randomStringSizes)) + L"\\"; //Randomly create a new random folder within that given directory.
+            subRootFolder = rootFolderLocation + random_string(randomStringSizes) + "\\"; //Randomly create a new random folder within that given directory.
 
             std::filesystem::create_directories(subRootFolder); //Create the initial random directory.
         }
@@ -214,20 +212,20 @@ int main(int argc, char* argv[])
     return 1;
 }
 
-void createFiles(const std::wstring& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes)
+void createFiles(const std::string& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes)
 {
-    std::wstring subFolder = rootFolder + stringToWString(random_string(randomStringLength)) + L"\\"; //Randomly create a new random folder within that given directory.
+    std::string subFolder = rootFolder + random_string(randomStringLength) + "\\"; //Randomly create a new random folder within that given directory.
 
     std::filesystem::create_directories(subFolder); //Create the initial random directory.
 
     std::ofstream randomFile; //Create randomFile handle that will be used to create files.
 
-    std::wstring randomString;
+    std::string randomString;
 
     for (size_t iterator = 0; iterator < fileAmount; ++iterator) //Iterate!
     {
-        randomString = stringToWString(random_string(randomStringLength));
-        randomFile.open(std::filesystem::path(subFolder + randomString + L".txt")); //Create random file with a handle to it.
+        randomString = random_string(randomStringLength);
+        randomFile.open(std::filesystem::path(subFolder + randomString + ".txt")); //Create random file with a handle to it.
 
         if (randomStringInput) //Check if we are writing a string to the file.
             randomFile << random_string(randomStringLength); //Input a random string into the file.
@@ -245,13 +243,6 @@ void createFiles(const std::wstring& rootFolder, const size_t& fileAmount, const
     }
 }
 
-std::wstring stringToWString(const std::string& s)
-{
-    std::wstring temp(s.length(), L' ');
-    std::copy(s.begin(), s.end(), temp.begin());
-    return temp;
-}
-
 std::string random_string(size_t length)
 {
     const std::string CHARACTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -263,27 +254,15 @@ std::string random_string(size_t length)
     std::string random_string;
 
     for (size_t i = 0; i < length; ++i)
-    {
         random_string += CHARACTERS[distribution(generator)];
-    }
 
     return random_string;
 }
 
-std::wstring charToWString(char* givenCharArray)
-{
-    std::string intermediaryString = givenCharArray;
-    int wchars_num = MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, NULL, 0);
-    wchar_t* wstr = new wchar_t[wchars_num];
-    MultiByteToWideChar(65001, 0, intermediaryString.c_str(), -1, wstr, wchars_num);
-
-    return wstr;
-}
-
 //Uniformly sets directory separators.
-std::wstring formatFilePath(std::wstring givenString, std::wstring givenDirectorySeparator)
+std::string formatFilePath(std::string givenString, std::string givenDirectorySeparator)
 {
-    if (givenDirectorySeparator == L"\\" || givenString.find(L"\\\\?\\") != std::wstring::npos) //If the windows max_path bypass is in the path, then all separators must be backslashes.
+    if (givenDirectorySeparator == "\\" || givenString.find("\\\\?\\") != std::string::npos) //If the windows max_path bypass is in the path, then all separators must be backslashes.
     {
         //Formating givenFile to have the slashes ALL be \.
         for (size_t i = 0; i < (size_t)givenString.length(); ++i)
@@ -308,7 +287,7 @@ std::wstring formatFilePath(std::wstring givenString, std::wstring givenDirector
 
 
 //BROWSE FOLDER - Opens a Windows Explorer browse folder dialog.
-std::wstring browseFolder()
+std::string browseFolder()
 {
     std::string outputString;
     nfdchar_t* outPath;
@@ -319,14 +298,14 @@ std::wstring browseFolder()
     {
         //USE THE PATH
         outputString = outPath;
-        return stringToWString(outputString);
+        return outputString;
     }
     else if (result == NFD::NFD_CANCEL) //USER CANCELLED...
-        return L"CANCEL";
+        return "CANCEL";
     else //ERROR...
         std::cout << "Error: " << NFD_GetError() << std::endl;
 
     //Return null values. Either an error occured, or the user cancelled.
     outputString = "";
-    return stringToWString(outputString);
+    return outputString;
 }
