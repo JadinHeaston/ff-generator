@@ -1,7 +1,24 @@
-# generateRandomFiles
-Allows the creation of randomly named folders and files, with the ability to add random content to generated files.
+# File and Folder Generator
+Allows the creation of randomly named folders and files, with the ability to add random content to generated files.  
 
-#Arguments:
+# TODO
+- [] Create a mechanism that allows the user to specify how deep folders should nest.
+- [] Allow option to create only folders.
+- [] Implement random attribute functionality.
+- [] Allow thread count to be specified properly.
+- [] 
+- []
+- []
+
+# Table of Contents
+- [File and Folder Generator](#file-and-folder-generator)
+- [TODO](#todo)
+- [Table of Contents](#table-of-contents)
+- [Arguments:](#arguments)
+- [Licensing](#licensing)
+
+# Arguments:
+```
 	--files-per-folder <INTEGER>
 		Amount of files per folder.
 	--folders-per-folder <INTEGER>
@@ -24,4 +41,6 @@ Allows the creation of randomly named folders and files, with the ability to add
 		Total file count.
 	-w
 		Write random content string to file.
+```
 
+# Licensing

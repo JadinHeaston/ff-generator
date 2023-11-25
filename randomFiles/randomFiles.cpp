@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     //Argument Verification
     
     //Make sure that a total file count is provided. Kinda the point of the program, huh?
-    totalFileAmount = 1;
+    //totalFileAmount = 1;
     if (totalFileAmount == 0)
     {
         std::cout << "ERROR: No file amount was defined." << std::endl;
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
         std::cout << "The root path (--path) is: " << rootFolderLocation << std::endl;
         std::cout << "CALCULATE ME" << " Folders will be created." << std::endl; //***** Calculate how many folders will be made.
         std::cout << totalFileAmount << " Files will be created. (--total-file-count)" << std::endl;
-        std::cout << "A maximum of " << filesPerFolder << " files can exist in each folder. (--files - per - folder)" << std::endl;
+        std::cout << "A maximum of " << filesPerFolder << " files can exist in each folder. (--files-per-folder)" << std::endl;
         if (writeRandomStringToFile)
             std::cout << "A \"" << randomStringSizes << "\" length string will be randomly created within each file. (--string-size)" << std::endl;
         if (randomAttributes)
@@ -181,16 +181,21 @@ int main(int argc, char* argv[])
 
 
 
-
-
-    thread_pool threadPool(threads);//Creating thread pool
-    size_t threadAssignmentIteration = totalFileAmount / filesPerFolder; //How many folders will be created. Could be 1 additional one, if there is a remainder.
     
+
+    thread_pool threadPool;
+    threadPool.reset(threads);//Creating thread pool
+    size_t threadAssignmentIteration = totalFileAmount / filesPerFolder; //How many folders will be created. Could be 1 additional one, if there is a remainder.
+
+    //std::cout << threadAssignmentIteration << std::endl;
+    //std::cout << rootFolderLocation << std::endl;
+    subRootFolder = rootFolderLocation + random_string(randomStringSizes) + "/"; //Randomly create a new random folder within that given directory.
+    system("PAUSE");
     for (size_t iterator = 0; iterator < threadAssignmentIteration; ++iterator) //Iterate!
     {
-        if (iterator % foldersPerFolder == 0 && iterator >= foldersPerFolder) //Create new directory under the root when max is hit.
+        if (iterator >= foldersPerFolder && iterator % foldersPerFolder == 0  ) //Create new directory under the root when max is hit.
         {
-            subRootFolder = rootFolderLocation + random_string(randomStringSizes) + "\\"; //Randomly create a new random folder within that given directory.
+            subRootFolder = rootFolderLocation + random_string(randomStringSizes) + "/"; //Randomly create a new random folder within that given directory.
 
             std::filesystem::create_directories(subRootFolder); //Create the initial random directory.
         }
@@ -214,10 +219,10 @@ int main(int argc, char* argv[])
 
 void createFiles(const std::string& rootFolder, const size_t& fileAmount, const bool& randomStringInput, const size_t& randomStringLength, const bool& randomAttributes)
 {
-    std::string subFolder = rootFolder + random_string(randomStringLength) + "\\"; //Randomly create a new random folder within that given directory.
-
+    std::string subFolder = rootFolder + random_string(randomStringLength) + "/"; //Randomly create a new random folder within that given directory.
+    //std::cout << rootFolder << std::endl;
     std::filesystem::create_directories(subFolder); //Create the initial random directory.
-
+    //system("PAUSE");
     std::ofstream randomFile; //Create randomFile handle that will be used to create files.
 
     std::string randomString;
